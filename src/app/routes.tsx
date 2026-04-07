@@ -7,7 +7,6 @@ import { Step3 } from './components/Step3';
 import { Step4 } from './components/Step4';
 import { Confirmation } from './components/Confirmation';
 
-// Wrapper component to provide CheckoutContext
 const LayoutWithProvider = () => {
   return (
     <CheckoutProvider>
@@ -27,19 +26,19 @@ export const router = createBrowserRouter([
       },
       {
         path: 'step1',
-        Component: Step1  // Item selection (with delivery add-ons)
+        Component: Step1
       },
       {
         path: 'step2',
-        Component: Step2  // Customs Information
+        Component: Step2
       },
       {
         path: 'step3',
-        Component: Step3  // Recipient Address
+        Component: Step3
       },
       {
         path: 'step4',
-        Component: Step4  // Review & Confirm
+        Component: Step4
       },
       {
         path: 'confirmation',
@@ -47,4 +46,6 @@ export const router = createBrowserRouter([
       }
     ]
   }
-]);
+], {
+  basename: '/Cpfigmatest'
+});

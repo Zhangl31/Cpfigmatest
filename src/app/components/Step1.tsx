@@ -949,7 +949,7 @@ export const Step1 = () => {
 
   const headerSubtitle = data.destination
     ? "You can change the destination at any time."
-    : "Choose the destination first and we’ll show the right delivery options.";
+    : "Choose the destination first and we'll show the right delivery options.";
 
   const isEditingDestination =
     !data.destination || showDestinationDropdown;
@@ -1234,7 +1234,7 @@ export const Step1 = () => {
                       }}
                     >
                       {DESTINATIONS.map(
-                        ({ value, flag }, index) => {
+                        ({ value }, index) => {
                           const isSelected =
                             data.destination === value;
                           return (
@@ -1259,12 +1259,7 @@ export const Step1 = () => {
                                   : "#FFFFFF",
                               }}
                             >
-                              <span className="flex items-center gap-2">
-                                <span className="text-lg">
-                                  {flag}
-                                </span>
-                                {value}
-                              </span>
+                              <span>{value}</span>
                               {isSelected && (
                                 <Check
                                   className="w-4 h-4"

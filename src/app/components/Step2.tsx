@@ -407,7 +407,7 @@ function CustomsTypeCard({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   DDP Recommendation Banner
+   DDP Recommendation Banner (Light Green)
 ───────────────────────────────────────────────────────────── */
 
 interface DdpBannerProps {
@@ -426,18 +426,18 @@ function DdpBanner({ onAddDdp }: DdpBannerProps) {
       exit={prefersReducedMotion ? {} : { opacity: 0, y: -10 }}
       className="p-4 rounded-xl"
       style={{
-        backgroundColor: "#FEF3C7",
-        border: "1px solid #FDE68A",
+        backgroundColor: "#ECFDF5",
+        border: "1px solid #A7F3D0",
       }}
     >
       <div className="flex gap-3">
         <div
           className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: "#FDE68A" }}
+          style={{ backgroundColor: "#D1FAE5" }}
         >
           <Info
             className="w-5 h-5"
-            style={{ color: "#D97706" }}
+            style={{ color: "#059669" }}
           />
         </div>
 
@@ -447,7 +447,7 @@ function DdpBanner({ onAddDdp }: DdpBannerProps) {
               fontFamily: "Inter, sans-serif",
               fontSize: "14px",
               fontWeight: 600,
-              color: "#92400E",
+              color: "#065F46",
               marginBottom: "4px",
             }}
           >
@@ -458,7 +458,7 @@ function DdpBanner({ onAddDdp }: DdpBannerProps) {
               fontFamily: "Inter, sans-serif",
               fontSize: "13px",
               fontWeight: 400,
-              color: "#A16207",
+              color: "#047857",
               lineHeight: "1.5",
               marginBottom: "12px",
             }}
@@ -476,12 +476,12 @@ function DdpBanner({ onAddDdp }: DdpBannerProps) {
             }}
             className="px-4 py-2.5 rounded-lg flex items-center gap-2"
             style={{
-              backgroundColor: "#D97706",
+              backgroundColor: "#059669",
               color: "#FFFFFF",
               fontFamily: "Inter, sans-serif",
               fontSize: "14px",
               fontWeight: 600,
-              boxShadow: "0 2px 8px rgba(217, 119, 6, 0.3)",
+              boxShadow: "0 2px 8px rgba(5, 150, 105, 0.3)",
             }}
           >
             <Sparkles className="w-4 h-4" />
@@ -824,7 +824,7 @@ export const Step2Customs = () => {
 
         <HelperText>
           {needsTaric
-            ? "Enter a description, then use Find TARIC code. This always returns 10092."
+            ? "Enter a description, then use Find TARIC code."
             : "Enter a description of what you are sending."}
         </HelperText>
       </motion.div>

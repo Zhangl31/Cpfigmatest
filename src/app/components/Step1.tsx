@@ -391,7 +391,7 @@ function getFlag(destination: string): string {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Helper: Get available add-ons based on item type, destination, contents
+   Helper: Get available add-ons based on item types, destination, contents
 ───────────────────────────────────────────────────────────── */
 
 type AddOnConfig = {

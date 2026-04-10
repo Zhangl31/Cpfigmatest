@@ -10,7 +10,6 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-   base: '/Cpfigmatest/',
   resolve: {
     alias: {
       // Alias @ to the src directory

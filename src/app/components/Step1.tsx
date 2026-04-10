@@ -98,14 +98,11 @@ const SERVICE_OPTIONS = [
 
 const DESTINATIONS = [
   { value: "Ireland", region: "ROI" },
-  { value: "Northern Ireland", region: "NI" },
   { value: "United Kingdom", region: "GB" },
   { value: "Germany", region: "EU" },
   { value: "France", region: "EU" },
-  { value: "Spain", region: "EU" },
   { value: "United States", region: "ROW" },
   { value: "Australia", region: "ROW" },
-  { value: "Canada", region: "ROW" },
 ];
 
 const CONTENTS_OPTIONS = [

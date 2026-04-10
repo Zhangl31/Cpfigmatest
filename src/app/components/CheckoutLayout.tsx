@@ -3,6 +3,32 @@ import { Outlet, useLocation } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import { useCheckout } from "../context/CheckoutContext";
 
+type Region = "ROI" | "NI" | "GB" | "EU" | "ROW";
+
+const DESTINATION_REGIONS: Record<string, Region> = {
+  Ireland: "ROI",
+  "Northern Ireland": "NI",
+  "United Kingdom": "GB",
+  Germany: "EU",
+  France: "EU",
+  Spain: "EU",
+  Italy: "EU",
+  Netherlands: "EU",
+  Belgium: "EU",
+  Portugal: "EU",
+  Austria: "EU",
+  Poland: "EU",
+  "United States": "ROW",
+  Australia: "ROW",
+  Canada: "ROW",
+  Japan: "ROW",
+  China: "ROW",
+};
+
+function getRegion(destination: string): Region {
+  return DESTINATION_REGIONS[destination] || "ROW";
+}
+
 export const CheckoutLayout = () => {
   const location = useLocation();
   const {
@@ -11,16 +37,30 @@ export const CheckoutLayout = () => {
     requiresContentsType,
   } = useCheckout();
 
-  const currentStep =
-    location.pathname === "/" || location.pathname === "/step1"
-      ? 1
-      : location.pathname === "/step2"
-        ? 2
-        : location.pathname === "/step3"
-          ? 3
-          : location.pathname === "/step4"
-            ? 4
-            : 0;
+  const region = getRegion(data.destination);
+  const isStep2Skipped = region === "ROI" || region === "NI";
+
+  const currentStep = useMemo(() => {
+    const path = location.pathname;
+
+    if (path === "/" || path === "/step1") return 1;
+
+    if (path === "/step2") {
+      return 2;
+    }
+
+    if (path === "/step3") {
+      return isStep2Skipped ? 2 : 3;
+    }
+
+    if (path === "/step4") {
+      return isStep2Skipped ? 3 : 4;
+    }
+
+    return 0;
+  }, [location.pathname, isStep2Skipped]);
+
+  const totalSteps = isStep2Skipped ? 3 : 4;
 
   const shouldShowTotalCost = useMemo(() => {
     if (!data.destination || !data.itemType || !data.weight) {
@@ -41,7 +81,9 @@ export const CheckoutLayout = () => {
   ]);
 
   const showBottomBar =
-    currentStep > 0 && currentStep < 5 && shouldShowTotalCost;
+    currentStep > 0 &&
+    currentStep <= totalSteps &&
+    shouldShowTotalCost;
 
   return (
     <div
@@ -80,7 +122,7 @@ export const CheckoutLayout = () => {
                 letterSpacing: "0.08em",
               }}
             >
-              Step {currentStep} of 4
+              Step {currentStep} of {totalSteps}
             </div>
           )}
         </div>
@@ -95,7 +137,9 @@ export const CheckoutLayout = () => {
               className="h-full rounded-full"
               style={{ backgroundColor: "#0D6F49" }}
               initial={{ width: 0 }}
-              animate={{ width: `${(currentStep / 4) * 100}%` }}
+              animate={{
+                width: `${(currentStep / totalSteps) * 100}%`,
+              }}
               transition={{ duration: 0.3 }}
             />
           </div>

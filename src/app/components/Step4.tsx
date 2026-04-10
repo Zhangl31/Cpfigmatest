@@ -27,9 +27,6 @@ import {
   RotateCcw,
   Briefcase,
   Sparkles,
-  X,
-  Plus,
-  Minus,
   Globe,
   CreditCard,
   Info,
@@ -72,7 +69,6 @@ const haptic = {
 ───────────────────────────────────────────────────────────── */
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
-
 const DDP_THRESHOLD = 170;
 
 // Item type display config
@@ -183,6 +179,87 @@ function getFlag(destination: string): string {
 }
 
 /* ─────────────────────────────────────────────────────────────
+   Helper: Recipient data
+───────────────────────────────────────────────────────────── */
+
+function getEditableRecipientFromData(
+  data: ReturnType<typeof useCheckout>["data"],
+) {
+  if (data.recipient) {
+    return {
+      fullName:
+        data.recipient.fullName ||
+        [data.recipient.firstName, data.recipient.lastName]
+          .filter(Boolean)
+          .join(" "),
+      company: data.recipient.company || "",
+      email: data.recipient.email || "",
+      phonePrefix: data.recipient.phonePrefix || "",
+      phoneNumber: data.recipient.phoneNumber || "",
+      addressLine1: data.recipient.addressLine1 || "",
+      addressLine2: data.recipient.addressLine2 || "",
+      addressLine3: data.recipient.addressLine3 || "",
+      city: data.recipient.city || "",
+      state: data.recipient.state || "",
+      postcode: data.recipient.postcode || "",
+      country: data.recipient.country || "",
+    };
+  }
+
+  if (data.selectedContact) {
+    return {
+      fullName: [
+        data.selectedContact.firstName,
+        data.selectedContact.lastName,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      company: data.selectedContact.company || "",
+      email: data.selectedContact.email || "",
+      phonePrefix: "",
+      phoneNumber: data.selectedContact.phone || "",
+      addressLine1: data.selectedContact.addressLine1 || "",
+      addressLine2: data.selectedContact.addressLine2 || "",
+      addressLine3: data.selectedContact.addressLine3 || "",
+      city: data.selectedContact.city || "",
+      state: data.selectedContact.state || "",
+      postcode: data.selectedContact.postcode || "",
+      country: data.selectedContact.country || "",
+    };
+  }
+
+  return null;
+}
+
+function getRecipientSummary(
+  data: ReturnType<typeof useCheckout>["data"],
+) {
+  const recipient = getEditableRecipientFromData(data);
+  if (!recipient) return null;
+
+  const lines = [
+    recipient.addressLine1,
+    recipient.addressLine2,
+    recipient.addressLine3,
+    recipient.city,
+    recipient.state,
+    recipient.postcode,
+    recipient.country,
+  ].filter(Boolean);
+
+  return {
+    fullName: recipient.fullName || "",
+    email: recipient.email || "",
+    phone:
+      [recipient.phonePrefix, recipient.phoneNumber]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || "",
+    lines,
+  };
+}
+
+/* ─────────────────────────────────────────────────────────────
    Helper: Get available add-ons based on selections
 ───────────────────────────────────────────────────────────── */
 
@@ -265,7 +342,6 @@ function getBasePrice(
   weight: number,
   destination: string,
 ): number {
-  // Simplified pricing logic - would come from API in production
   if (!itemType || !weight || !destination) return 0;
 
   const region = getRegion(destination);
@@ -461,8 +537,6 @@ function ReviewSection({
   children,
   summaryContent,
 }: ReviewSectionProps) {
-  const prefersReducedMotion = useReducedMotion();
-
   return (
     <motion.div
       layout
@@ -478,7 +552,6 @@ function ReviewSection({
           : "0 1px 3px rgba(0, 0, 0, 0.05)",
       }}
     >
-      {/* Header */}
       <button
         onClick={() => {
           haptic.light();
@@ -557,7 +630,6 @@ function ReviewSection({
         </div>
       </button>
 
-      {/* Expandable Content */}
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
@@ -627,7 +699,6 @@ function AddOnToggle({
     >
       <RippleContainer ripples={ripples} />
 
-      {/* Icon */}
       <div
         className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
         style={{
@@ -640,7 +711,6 @@ function AddOnToggle({
         />
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center">
           <span
@@ -672,7 +742,6 @@ function AddOnToggle({
         </p>
       </div>
 
-      {/* Price / Included badge */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {addOn.included ? (
           <span
@@ -719,7 +788,7 @@ function AddOnToggle({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   DDP Recommendation Banner (for Review screen)
+   DDP Recommendation Banner
 ───────────────────────────────────────────────────────────── */
 
 interface DdpBannerProps {
@@ -872,40 +941,6 @@ function PriceSummary({
   );
 }
 
-function getRecipientDisplayData(data: ReturnType<typeof useCheckout>["data"]) {
-  const recipient = data.recipient;
-  const selectedContact = data.selectedContact;
-
-  const source = recipient || selectedContact;
-  if (!source) return null;
-
-  const fullName = [source.firstName, source.lastName]
-    .filter(Boolean)
-    .join(" ");
-
-  const phone =
-    recipient && recipient.phoneNumber
-      ? `${recipient.phonePrefix || ""} ${recipient.phoneNumber}`.trim()
-      : ("phone" in source ? source.phone : "");
-
-  const lines = [
-    source.company,
-    source.addressLine1,
-    source.addressLine2,
-    source.addressLine3,
-    source.city,
-    source.state,
-    source.postcode,
-    source.country,
-  ].filter(Boolean);
-
-  return {
-    fullName,
-    email: source.email || "",
-    phone: phone || "",
-    lines,
-  };
-}
 /* ─────────────────────────────────────────────────────────────
    Main Component
 ───────────────────────────────────────────────────────────── */
@@ -925,9 +960,8 @@ export const Step3Review = () => {
     setCtaContainer(
       document.getElementById("bottom-cta-container"),
     );
-  }, []);
+  });
 
-  // Get available add-ons
   const availableAddOns = useMemo(
     () =>
       getAvailableAddOns(
@@ -938,7 +972,6 @@ export const Step3Review = () => {
     [data.itemType, data.destination, data.contents],
   );
 
-  // Calculate pricing
   const basePrice = useMemo(
     () =>
       getBasePrice(
@@ -952,7 +985,11 @@ export const Step3Review = () => {
   const addOnsPrice = useMemo(() => {
     return availableAddOns.reduce((total, addOn) => {
       if (addOn.included) return total;
-      if (data.addOns[addOn.key]) {
+      if (
+        data.addOns[
+          addOn.key as keyof typeof data.addOns
+        ]
+      ) {
         return total + addOn.price;
       }
       return total;
@@ -961,23 +998,27 @@ export const Step3Review = () => {
 
   const totalPrice = basePrice + addOnsPrice;
 
-  // Check if DDP recommendation should show
   const region = getRegion(data.destination);
   const showDdpRecommendation =
     region === "GB" &&
     data.declaredValue > DDP_THRESHOLD &&
     !data.addOns.ddp;
 
-  // Get selected add-ons for summary
   const selectedAddOnsSummary = useMemo(() => {
     const selected = availableAddOns.filter(
-      (addOn) => data.addOns[addOn.key] || addOn.included,
+      (addOn) =>
+        data.addOns[
+          addOn.key as keyof typeof data.addOns
+        ] || addOn.included,
     );
     if (selected.length === 0) return "No extras selected";
     return selected.map((a) => a.label).join(", ");
   }, [availableAddOns, data.addOns]);
 
-  /* ───────────── Handlers ───────────── */
+  const recipientSummary = useMemo(
+    () => getRecipientSummary(data),
+    [data],
+  );
 
   const handleToggleSection = (section: string) => {
     setExpandedSection(
@@ -989,7 +1030,10 @@ export const Step3Review = () => {
     updateData({
       addOns: {
         ...data.addOns,
-        [addOnKey]: !data.addOns[addOnKey],
+        [addOnKey]:
+          !data.addOns[
+            addOnKey as keyof typeof data.addOns
+          ],
       },
     });
   };
@@ -1008,37 +1052,72 @@ export const Step3Review = () => {
     navigate("/confirmation");
   };
 
-  // Format weight
+  const handleRecipientFieldChange = (
+    field:
+      | "fullName"
+      | "company"
+      | "email"
+      | "phonePrefix"
+      | "phoneNumber"
+      | "addressLine1"
+      | "addressLine2"
+      | "addressLine3"
+      | "city"
+      | "state"
+      | "postcode"
+      | "country",
+    value: string,
+  ) => {
+    const base =
+      getEditableRecipientFromData(data) || {
+        fullName: "",
+        company: "",
+        email: "",
+        phonePrefix: "",
+        phoneNumber: "",
+        addressLine1: "",
+        addressLine2: "",
+        addressLine3: "",
+        city: "",
+        state: "",
+        postcode: "",
+        country: data.destination || "",
+      };
+
+    updateData({
+      selectedContact: null,
+      recipient: {
+        ...data.recipient,
+        ...base,
+        [field]: value,
+      },
+    });
+  };
+
   const formatWeight = (weight: number) =>
     weight >= 1 ? `${weight}kg` : `${weight * 1000}g`;
 
-  // Get item type config
   const itemTypeConfig = data.itemType
     ? ITEM_TYPE_CONFIG[data.itemType]
     : null;
   const ItemIcon = itemTypeConfig?.icon || Package;
 
-  // Get customs type config
   const customsTypeConfig = data.customsType
     ? CUSTOMS_TYPE_CONFIG[data.customsType]
     : null;
 
-  // Check if customs info exists
   const hasCustomsInfo =
     region !== "ROI" &&
     region !== "NI" &&
     (data.itemDescription || data.declaredValue);
-  const recipientDisplay = useMemo(
-    () => getRecipientDisplayData(data),
-    [data],
-  );
+
+  const editableRecipient = getEditableRecipientFromData(data);
+
   return (
     <div className="py-6 space-y-5">
       {/* Back Button */}
       <button
-        onClick={() =>
-          navigate(hasCustomsInfo ? "/step2" : "/step1")
-        }
+        onClick={() => navigate("/step3")}
         className="flex items-center gap-2 -ml-2 p-2"
         style={{
           fontFamily: "Inter, sans-serif",
@@ -1093,7 +1172,6 @@ export const Step3Review = () => {
         }
       >
         <div className="space-y-4">
-          {/* Item Type Display */}
           <div>
             <label
               className="block mb-2"
@@ -1127,7 +1205,6 @@ export const Step3Review = () => {
             </div>
           </div>
 
-          {/* Destination Display */}
           <div>
             <label
               className="block mb-2"
@@ -1160,7 +1237,6 @@ export const Step3Review = () => {
             </div>
           </div>
 
-          {/* Weight Display */}
           <div>
             <label
               className="block mb-2"
@@ -1190,7 +1266,6 @@ export const Step3Review = () => {
             </div>
           </div>
 
-          {/* Edit link */}
           <button
             onClick={() => navigate("/step1")}
             className="flex items-center gap-2 mt-2"
@@ -1207,8 +1282,8 @@ export const Step3Review = () => {
         </div>
       </ReviewSection>
 
-            {/* Recipient Address Section */}
-      {recipientDisplay && (
+      {/* Recipient Address Section */}
+      {recipientSummary && editableRecipient && (
         <ReviewSection
           title="Recipient Address"
           icon={MapPin}
@@ -1216,12 +1291,12 @@ export const Step3Review = () => {
           onToggle={() => handleToggleSection("recipient")}
           summaryContent={
             <span>
-              {recipientDisplay.fullName} • {recipientDisplay.lines[0]}
+              {recipientSummary.fullName} •{" "}
+              {recipientSummary.lines[0]}
             </span>
           }
         >
           <div className="space-y-4">
-            {/* Recipient Name */}
             <div>
               <label
                 className="block mb-2"
@@ -1232,26 +1307,28 @@ export const Step3Review = () => {
                   color: "#6B7280",
                 }}
               >
-                Recipient
+                Full Name
               </label>
-              <div
-                className="p-3 rounded-xl"
-                style={{ backgroundColor: "#F9FAFB" }}
-              >
-                <span
-                  style={{
-                    fontFamily: "Inter, sans-serif",
-                    fontSize: "15px",
-                    fontWeight: 500,
-                    color: "#111827",
-                  }}
-                >
-                  {recipientDisplay.fullName}
-                </span>
-              </div>
+              <input
+                type="text"
+                value={editableRecipient.fullName}
+                onChange={(e) =>
+                  handleRecipientFieldChange(
+                    "fullName",
+                    e.target.value,
+                  )
+                }
+                className="w-full px-4 py-3 rounded-xl"
+                style={{
+                  backgroundColor: "#F9FAFB",
+                  border: "1px solid #E5E7EB",
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "15px",
+                  color: "#111827",
+                }}
+              />
             </div>
 
-            {/* Address */}
             <div>
               <label
                 className="block mb-2"
@@ -1262,30 +1339,61 @@ export const Step3Review = () => {
                   color: "#6B7280",
                 }}
               >
-                Delivery Address
+                Company
               </label>
-              <div
-                className="p-3 rounded-xl"
-                style={{ backgroundColor: "#F9FAFB" }}
-              >
-                <div
-                  style={{
-                    fontFamily: "Inter, sans-serif",
-                    fontSize: "15px",
-                    fontWeight: 400,
-                    color: "#111827",
-                    lineHeight: "1.6",
-                  }}
-                >
-                  {recipientDisplay.lines.map((line, index) => (
-                    <div key={`${line}-${index}`}>{line}</div>
-                  ))}
-                </div>
-              </div>
+              <input
+                type="text"
+                value={editableRecipient.company}
+                onChange={(e) =>
+                  handleRecipientFieldChange(
+                    "company",
+                    e.target.value,
+                  )
+                }
+                className="w-full px-4 py-3 rounded-xl"
+                style={{
+                  backgroundColor: "#F9FAFB",
+                  border: "1px solid #E5E7EB",
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "15px",
+                  color: "#111827",
+                }}
+              />
             </div>
 
-            {/* Email */}
-            {recipientDisplay.email && (
+            <div>
+              <label
+                className="block mb-2"
+                style={{
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#6B7280",
+                }}
+              >
+                Email
+              </label>
+              <input
+                type="email"
+                value={editableRecipient.email}
+                onChange={(e) =>
+                  handleRecipientFieldChange(
+                    "email",
+                    e.target.value,
+                  )
+                }
+                className="w-full px-4 py-3 rounded-xl"
+                style={{
+                  backgroundColor: "#F9FAFB",
+                  border: "1px solid #E5E7EB",
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "15px",
+                  color: "#111827",
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label
                   className="block mb-2"
@@ -1296,29 +1404,29 @@ export const Step3Review = () => {
                     color: "#6B7280",
                   }}
                 >
-                  Email
+                  Prefix
                 </label>
-                <div
-                  className="p-3 rounded-xl"
-                  style={{ backgroundColor: "#F9FAFB" }}
-                >
-                  <span
-                    style={{
-                      fontFamily: "Inter, sans-serif",
-                      fontSize: "15px",
-                      fontWeight: 400,
-                      color: "#111827",
-                    }}
-                  >
-                    {recipientDisplay.email}
-                  </span>
-                </div>
+                <input
+                  type="text"
+                  value={editableRecipient.phonePrefix}
+                  onChange={(e) =>
+                    handleRecipientFieldChange(
+                      "phonePrefix",
+                      e.target.value,
+                    )
+                  }
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{
+                    backgroundColor: "#F9FAFB",
+                    border: "1px solid #E5E7EB",
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "15px",
+                    color: "#111827",
+                  }}
+                />
               </div>
-            )}
 
-            {/* Phone */}
-            {recipientDisplay.phone && (
-              <div>
+              <div className="col-span-2">
                 <label
                   className="block mb-2"
                   style={{
@@ -1330,27 +1438,257 @@ export const Step3Review = () => {
                 >
                   Phone
                 </label>
-                <div
-                  className="p-3 rounded-xl"
-                  style={{ backgroundColor: "#F9FAFB" }}
-                >
-                  <span
-                    style={{
-                      fontFamily: "Inter, sans-serif",
-                      fontSize: "15px",
-                      fontWeight: 400,
-                      color: "#111827",
-                    }}
-                  >
-                    {recipientDisplay.phone}
-                  </span>
-                </div>
+                <input
+                  type="text"
+                  value={editableRecipient.phoneNumber}
+                  onChange={(e) =>
+                    handleRecipientFieldChange(
+                      "phoneNumber",
+                      e.target.value,
+                    )
+                  }
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{
+                    backgroundColor: "#F9FAFB",
+                    border: "1px solid #E5E7EB",
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "15px",
+                    color: "#111827",
+                  }}
+                />
               </div>
-            )}
+            </div>
 
-            {/* Edit link */}
+            <div>
+              <label
+                className="block mb-2"
+                style={{
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#6B7280",
+                }}
+              >
+                Address Line 1
+              </label>
+              <input
+                type="text"
+                value={editableRecipient.addressLine1}
+                onChange={(e) =>
+                  handleRecipientFieldChange(
+                    "addressLine1",
+                    e.target.value,
+                  )
+                }
+                className="w-full px-4 py-3 rounded-xl"
+                style={{
+                  backgroundColor: "#F9FAFB",
+                  border: "1px solid #E5E7EB",
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "15px",
+                  color: "#111827",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                className="block mb-2"
+                style={{
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#6B7280",
+                }}
+              >
+                Address Line 2
+              </label>
+              <input
+                type="text"
+                value={editableRecipient.addressLine2}
+                onChange={(e) =>
+                  handleRecipientFieldChange(
+                    "addressLine2",
+                    e.target.value,
+                  )
+                }
+                className="w-full px-4 py-3 rounded-xl"
+                style={{
+                  backgroundColor: "#F9FAFB",
+                  border: "1px solid #E5E7EB",
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "15px",
+                  color: "#111827",
+                }}
+              />
+            </div>
+
+            <div>
+              <label
+                className="block mb-2"
+                style={{
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#6B7280",
+                }}
+              >
+                Address Line 3
+              </label>
+              <input
+                type="text"
+                value={editableRecipient.addressLine3}
+                onChange={(e) =>
+                  handleRecipientFieldChange(
+                    "addressLine3",
+                    e.target.value,
+                  )
+                }
+                className="w-full px-4 py-3 rounded-xl"
+                style={{
+                  backgroundColor: "#F9FAFB",
+                  border: "1px solid #E5E7EB",
+                  fontFamily: "Inter, sans-serif",
+                  fontSize: "15px",
+                  color: "#111827",
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label
+                  className="block mb-2"
+                  style={{
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "#6B7280",
+                  }}
+                >
+                  City
+                </label>
+                <input
+                  type="text"
+                  value={editableRecipient.city}
+                  onChange={(e) =>
+                    handleRecipientFieldChange(
+                      "city",
+                      e.target.value,
+                    )
+                  }
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{
+                    backgroundColor: "#F9FAFB",
+                    border: "1px solid #E5E7EB",
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "15px",
+                    color: "#111827",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  className="block mb-2"
+                  style={{
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "#6B7280",
+                  }}
+                >
+                  State/County
+                </label>
+                <input
+                  type="text"
+                  value={editableRecipient.state}
+                  onChange={(e) =>
+                    handleRecipientFieldChange(
+                      "state",
+                      e.target.value,
+                    )
+                  }
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{
+                    backgroundColor: "#F9FAFB",
+                    border: "1px solid #E5E7EB",
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "15px",
+                    color: "#111827",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label
+                  className="block mb-2"
+                  style={{
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "#6B7280",
+                  }}
+                >
+                  Postcode
+                </label>
+                <input
+                  type="text"
+                  value={editableRecipient.postcode}
+                  onChange={(e) =>
+                    handleRecipientFieldChange(
+                      "postcode",
+                      e.target.value,
+                    )
+                  }
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{
+                    backgroundColor: "#F9FAFB",
+                    border: "1px solid #E5E7EB",
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "15px",
+                    color: "#111827",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  className="block mb-2"
+                  style={{
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "#6B7280",
+                  }}
+                >
+                  Country
+                </label>
+                <input
+                  type="text"
+                  value={editableRecipient.country}
+                  onChange={(e) =>
+                    handleRecipientFieldChange(
+                      "country",
+                      e.target.value,
+                    )
+                  }
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{
+                    backgroundColor: "#F9FAFB",
+                    border: "1px solid #E5E7EB",
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "15px",
+                    color: "#111827",
+                  }}
+                />
+              </div>
+            </div>
+
             <button
-              onClick={() => navigate("/step2")}
+              onClick={() => navigate("/step3")}
               className="flex items-center gap-2 mt-2"
               style={{
                 fontFamily: "Inter, sans-serif",
@@ -1360,7 +1698,7 @@ export const Step3Review = () => {
               }}
             >
               <Edit3 className="w-4 h-4" />
-              Change recipient details
+              Open full recipient screen
             </button>
           </div>
         </ReviewSection>
@@ -1381,7 +1719,6 @@ export const Step3Review = () => {
           }
         >
           <div className="space-y-4">
-            {/* Customs Type */}
             <div>
               <label
                 className="block mb-2"
@@ -1417,7 +1754,6 @@ export const Step3Review = () => {
               </div>
             </div>
 
-            {/* Item Description */}
             {data.itemDescription && (
               <div>
                 <label
@@ -1449,7 +1785,6 @@ export const Step3Review = () => {
               </div>
             )}
 
-            {/* Declared Value */}
             <div>
               <label
                 className="block mb-2"
@@ -1479,7 +1814,6 @@ export const Step3Review = () => {
               </div>
             </div>
 
-            {/* TARIC Code (if present) */}
             {data.taricCode && (
               <div>
                 <label
@@ -1511,7 +1845,6 @@ export const Step3Review = () => {
               </div>
             )}
 
-            {/* Edit link */}
             <button
               onClick={() => navigate("/step2")}
               className="flex items-center gap-2 mt-2"
@@ -1529,7 +1862,7 @@ export const Step3Review = () => {
         </ReviewSection>
       )}
 
-      {/* Extra Services Section - EDITABLE */}
+      {/* Extra Services Section */}
       <ReviewSection
         title="Extra Services"
         icon={Sparkles}
@@ -1538,7 +1871,6 @@ export const Step3Review = () => {
         summaryContent={selectedAddOnsSummary}
       >
         <div className="space-y-3">
-          {/* DDP Recommendation Banner */}
           <AnimatePresence>
             {showDdpRecommendation && (
               <DdpRecommendationBanner
@@ -1547,12 +1879,15 @@ export const Step3Review = () => {
             )}
           </AnimatePresence>
 
-          {/* Add-on Toggles */}
           {availableAddOns.map((addOn) => (
             <AddOnToggle
               key={addOn.key}
               addOn={addOn}
-              isSelected={data.addOns[addOn.key] || false}
+              isSelected={
+                data.addOns[
+                  addOn.key as keyof typeof data.addOns
+                ] || false
+              }
               onToggle={() => handleAddOnToggle(addOn.key)}
             />
           ))}

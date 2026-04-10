@@ -141,8 +141,18 @@ function getCustomsLevel(destination: string): CustomsLevel {
   }
 }
 
-function requiresTaricCode(destination: string): boolean {
+function requiresTaricCode(
+  destination: string,
+  contents: "documents only" | "goods" | null,
+  customsType: CustomsType | null,
+): boolean {
   const region = getRegion(destination);
+  const isDocumentShipment =
+    contents === "documents only" ||
+    customsType === "documents";
+
+  if (isDocumentShipment) return false;
+
   return region === "GB" || region === "ROW";
 }
 
@@ -407,7 +417,7 @@ function CustomsTypeCard({
 }
 
 /* ─────────────────────────────────────────────────────────────
-   DDP Recommendation Banner (Light Green)
+   DDP Recommendation Banner
 ───────────────────────────────────────────────────────────── */
 
 interface DdpBannerProps {
@@ -426,18 +436,18 @@ function DdpBanner({ onAddDdp }: DdpBannerProps) {
       exit={prefersReducedMotion ? {} : { opacity: 0, y: -10 }}
       className="p-4 rounded-xl"
       style={{
-        backgroundColor: "#ECFDF5",
-        border: "1px solid #A7F3D0",
+        backgroundColor: "#FEF3C7",
+        border: "1px solid #FDE68A",
       }}
     >
       <div className="flex gap-3">
         <div
           className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: "#D1FAE5" }}
+          style={{ backgroundColor: "#FDE68A" }}
         >
           <Info
             className="w-5 h-5"
-            style={{ color: "#059669" }}
+            style={{ color: "#D97706" }}
           />
         </div>
 
@@ -447,7 +457,7 @@ function DdpBanner({ onAddDdp }: DdpBannerProps) {
               fontFamily: "Inter, sans-serif",
               fontSize: "14px",
               fontWeight: 600,
-              color: "#065F46",
+              color: "#92400E",
               marginBottom: "4px",
             }}
           >
@@ -458,7 +468,7 @@ function DdpBanner({ onAddDdp }: DdpBannerProps) {
               fontFamily: "Inter, sans-serif",
               fontSize: "13px",
               fontWeight: 400,
-              color: "#047857",
+              color: "#A16207",
               lineHeight: "1.5",
               marginBottom: "12px",
             }}
@@ -476,12 +486,12 @@ function DdpBanner({ onAddDdp }: DdpBannerProps) {
             }}
             className="px-4 py-2.5 rounded-lg flex items-center gap-2"
             style={{
-              backgroundColor: "#059669",
+              backgroundColor: "#D97706",
               color: "#FFFFFF",
               fontFamily: "Inter, sans-serif",
               fontSize: "14px",
               fontWeight: 600,
-              boxShadow: "0 2px 8px rgba(5, 150, 105, 0.3)",
+              boxShadow: "0 2px 8px rgba(217, 119, 6, 0.3)",
             }}
           >
             <Sparkles className="w-4 h-4" />
@@ -518,8 +528,13 @@ export const Step2Customs = () => {
   );
 
   const needsTaric = useMemo(
-    () => requiresTaricCode(data.destination),
-    [data.destination],
+    () =>
+      requiresTaricCode(
+        data.destination,
+        data.contents,
+        data.customsType,
+      ),
+    [data.destination, data.contents, data.customsType],
   );
 
   const showDdpBanner = useMemo(
@@ -781,50 +796,52 @@ export const Step2Customs = () => {
           }}
         />
 
-        <div className="mt-3 flex items-center gap-3 flex-wrap">
-          <button
-            type="button"
-            onClick={handleFindTaricCode}
-            disabled={!data.itemDescription.trim()}
-            className="px-4 py-2.5 rounded-xl flex items-center gap-2 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: "#0D6F49",
-              color: "#FFFFFF",
-              fontFamily: "Inter, sans-serif",
-              fontSize: "14px",
-              fontWeight: 600,
-              opacity: data.itemDescription.trim() ? 1 : 0.45,
-            }}
-          >
-            <Search className="w-4 h-4" />
-            Find TARIC code
-          </button>
-
-          {foundTaricCode && (
-            <div
-              className="px-3 py-2 rounded-xl"
+        {needsTaric && (
+          <div className="mt-3 flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={handleFindTaricCode}
+              disabled={!data.itemDescription.trim()}
+              className="px-4 py-2.5 rounded-xl flex items-center gap-2 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: "#F0FDF4",
-                border: "1px solid #BBF7D0",
+                backgroundColor: "#0D6F49",
+                color: "#FFFFFF",
+                fontFamily: "Inter, sans-serif",
+                fontSize: "14px",
+                fontWeight: 600,
+                opacity: data.itemDescription.trim() ? 1 : 0.45,
               }}
             >
-              <span
+              <Search className="w-4 h-4" />
+              Find TARIC code
+            </button>
+
+            {foundTaricCode && (
+              <div
+                className="px-3 py-2 rounded-xl"
                 style={{
-                  fontFamily: "Inter, sans-serif",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  color: "#0D6F49",
+                  backgroundColor: "#F0FDF4",
+                  border: "1px solid #BBF7D0",
                 }}
               >
-                TARIC code: {foundTaricCode}
-              </span>
-            </div>
-          )}
-        </div>
+                <span
+                  style={{
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: "#0D6F49",
+                  }}
+                >
+                  TARIC code: {foundTaricCode}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         <HelperText>
           {needsTaric
-            ? "Enter a description, then use Find TARIC code."
+            ? "Enter a description, then use Find TARIC code. This always returns 10092."
             : "Enter a description of what you are sending."}
         </HelperText>
       </motion.div>

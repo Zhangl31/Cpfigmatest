@@ -1,28 +1,53 @@
 import React, {
   createContext,
-  useCallback,
   useContext,
   useMemo,
   useState,
-  type ReactNode,
+  ReactNode,
 } from "react";
 
 export type ItemType =
   | "letter"
   | "large-envelope"
   | "small-packet"
-  | "parcel"
-  | null;
+  | "parcel";
 
-export type ContentsType = "documents only" | "goods" | null;
+export type Region = "ROI" | "NI" | "GB" | "EU" | "ROW";
 
 export type CustomsType =
   | "documents"
   | "sale_of_goods"
   | "gift"
   | "returned_goods"
-  | "commercial_sample"
-  | null;
+  | "commercial_sample";
+
+export interface AddOns {
+  tracking: boolean;
+  express: boolean;
+  insuranceSignature: boolean;
+  insurance: boolean;
+  additionalInsurance: boolean;
+  ddp: boolean;
+}
+
+export interface RecipientData {
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  company?: string;
+  email?: string;
+  countryCode?: string;
+  phonePrefix?: string;
+  phoneNumber?: string;
+  addressLine1: string;
+  addressLine2?: string;
+  addressLine3?: string;
+  city: string;
+  state?: string;
+  postcode: string;
+  country: string;
+  saveToAddressBook?: boolean;
+}
 
 export interface SavedContact {
   id: string;
@@ -35,51 +60,9 @@ export interface SavedContact {
   addressLine2?: string;
   addressLine3?: string;
   city: string;
-  state: string;
-  postcode?: string;
+  state?: string;
+  postcode: string;
   country: string;
-}
-
-export interface RecipientData {
-  firstName: string;
-  lastName: string;
-  company?: string;
-  email?: string;
-  countryCode: string;
-  phonePrefix: string;
-  phoneNumber: string;
-  addressLine1: string;
-  addressLine2?: string;
-  addressLine3?: string;
-  city: string;
-  state: string;
-  postcode?: string;
-  country: string;
-  saveToAddressBook: boolean;
-}
-
-export interface AddOns {
-  tracking: boolean;
-  express: boolean;
-  insuranceSignature: boolean;
-  insurance: boolean;
-  additionalInsurance: boolean;
-  ddp: boolean;
-}
-
-export interface CheckoutData {
-  itemType: ItemType;
-  contents: ContentsType;
-  destination: string;
-  weight: number;
-  recipient: RecipientData | null;
-  selectedContact: SavedContact | null;
-  addOns: AddOns;
-  customsType: CustomsType;
-  itemDescription: string;
-  declaredValue: number;
-  taricCode: string;
-  labelPdfUrl: string;
 }
 
 export interface ValidationError {
@@ -87,113 +70,42 @@ export interface ValidationError {
   message: string;
 }
 
+export interface CheckoutData {
+  // Step 1
+  itemType: ItemType | null;
+  weight: number;
+  destination: string;
+  contents: "documents only" | "goods" | null;
+  addOns: AddOns;
+
+  // Step 2
+  customsType: CustomsType | null;
+  itemDescription: string;
+  declaredValue: number;
+  taricCode: string;
+
+  // Step 3
+  selectedContact: SavedContact | null;
+  recipient: RecipientData | null;
+}
+
 interface CheckoutContextType {
   data: CheckoutData;
   updateData: (updates: Partial<CheckoutData>) => void;
-  resetCheckout: () => void;
-  resetAddOns: () => void;
   getBasePrice: () => number;
   getAddOnPrice: () => number;
   getTotalPrice: () => number;
-  getWeightLimits: () => {
-    min: number;
-    max: number;
-    default: number;
-  } | null;
-  canShowPrice: () => boolean;
-  getValidationErrors: (step?: number) => ValidationError[];
-  isStepValid: (step: number) => boolean;
   requiresContentsType: () => boolean;
+  getValidationErrors: (step: number) => ValidationError[];
+  isStepValid: (step: number) => boolean;
+  resetCheckout: () => void;
 }
 
 const CheckoutContext = createContext<
   CheckoutContextType | undefined
 >(undefined);
 
-export const SAVED_CONTACTS: SavedContact[] = [
-  {
-    id: "1",
-    firstName: "Sarah",
-    lastName: "Murphy",
-    company: "Tech Solutions Ltd",
-    email: "sarah@techsolutions.ie",
-    phone: "+353 86 123 4567",
-    addressLine1: "15 O'Connell Street",
-    city: "Dublin",
-    state: "Dublin",
-    postcode: "D01 F5P2",
-    country: "Ireland",
-  },
-  {
-    id: "2",
-    firstName: "James",
-    lastName: "O'Brien",
-    email: "james.obrien@email.co.uk",
-    phone: "+44 20 7946 0958",
-    addressLine1: "42 Baker Street",
-    addressLine2: "Flat 3B",
-    city: "London",
-    state: "Greater London",
-    postcode: "NW1 6XE",
-    country: "United Kingdom",
-  },
-  {
-    id: "3",
-    firstName: "Klaus",
-    lastName: "Schmidt",
-    company: "Bauer Industries",
-    email: "k.schmidt@bauer.de",
-    phone: "+49 30 1234567",
-    addressLine1: "Hauptstraße 45",
-    city: "Berlin",
-    state: "Berlin",
-    postcode: "10115",
-    country: "Germany",
-  },
-  {
-    id: "4",
-    firstName: "Emma",
-    lastName: "Walsh",
-    email: "emma.walsh@gmail.com",
-    phone: "+353 87 654 3210",
-    addressLine1: "28 Grafton Street",
-    city: "Cork",
-    state: "Cork",
-    postcode: "T12 K8PW",
-    country: "Ireland",
-  },
-];
-
-export const WEIGHT_LIMITS: Record<
-  NonNullable<ItemType>,
-  { min: number; max: number; default: number }
-> = {
-  letter: { min: 0.01, max: 0.1, default: 0.05 },
-  "large-envelope": { min: 0.01, max: 0.5, default: 0.1 },
-  "small-packet": { min: 0.01, max: 2, default: 0.1 },
-  parcel: { min: 0.1, max: 30, default: 0.5 },
-};
-
-const WEIGHT_BAND_CONFIG: Partial<
-  Record<
-    NonNullable<ItemType>,
-    { bandSize: number; additionalRate: number }
-  >
-> = {
-  parcel: { bandSize: 0.5, additionalRate: 0.1 },
-  "small-packet": { bandSize: 0.1, additionalRate: 0.2 },
-  "large-envelope": { bandSize: 0.1, additionalRate: 0.3 },
-};
-
-export const REQUIRES_CONTENTS_ITEM_TYPES: ItemType[] = [
-  "letter",
-  "large-envelope",
-  "small-packet",
-];
-
-export const DOMESTIC_DESTINATIONS = ["Ireland"];
-
-const DEFAULT_ADD_ONS: AddOns = {
+const EMPTY_ADD_ONS: AddOns = {
   tracking: false,
   express: false,
   insuranceSignature: false,
@@ -202,352 +114,303 @@ const DEFAULT_ADD_ONS: AddOns = {
   ddp: false,
 };
 
-const BASE_RATES: Record<
-  NonNullable<ItemType>,
-  Record<string, number>
-> = {
-  letter: {
-    Ireland: 1.5,
-    "United Kingdom": 2.5,
-    Germany: 3.5,
-    France: 3.5,
-    Spain: 3.5,
-    "United States": 5.0,
-    "Northern Ireland": 2.5,
-    Australia: 5.0,
-    Canada: 5.0,
-  },
-  "large-envelope": {
-    Ireland: 2.5,
-    "United Kingdom": 3.5,
-    Germany: 4.5,
-    France: 4.5,
-    Spain: 4.5,
-    "United States": 6.0,
-    "Northern Ireland": 3.5,
-    Australia: 6.0,
-    Canada: 6.0,
-  },
-  "small-packet": {
-    Ireland: 4.5,
-    "United Kingdom": 5.5,
-    Germany: 6.5,
-    France: 6.5,
-    Spain: 6.5,
-    "United States": 10.0,
-    "Northern Ireland": 5.5,
-    Australia: 10.0,
-    Canada: 10.0,
-  },
-  parcel: {
-    Ireland: 6.5,
-    "United Kingdom": 8.5,
-    Germany: 12.5,
-    France: 12.5,
-    Spain: 12.5,
-    "United States": 18.0,
-    "Northern Ireland": 8.5,
-    Australia: 18.0,
-    Canada: 18.0,
-  },
-};
-
-const createInitialCheckoutData = (): CheckoutData => ({
+const initialData: CheckoutData = {
   itemType: null,
-  contents: null,
-  destination: "",
   weight: 0,
-  recipient: null,
-  selectedContact: null,
-  addOns: { ...DEFAULT_ADD_ONS },
+  destination: "",
+  contents: null,
+  addOns: EMPTY_ADD_ONS,
   customsType: null,
   itemDescription: "",
   declaredValue: 0,
   taricCode: "",
-  labelPdfUrl: "",
-});
+  selectedContact: null,
+  recipient: null,
+};
 
-function cloneDefaultAddOns(): AddOns {
-  return { ...DEFAULT_ADD_ONS };
+export const SAVED_CONTACTS: SavedContact[] = [
+  {
+    id: "1",
+    firstName: "Aoife",
+    lastName: "Murphy",
+    email: "aoife@example.com",
+    addressLine1: "12 Main Street",
+    city: "Dublin",
+    postcode: "D02 XY76",
+    country: "Ireland",
+  },
+  {
+    id: "2",
+    firstName: "Max",
+    lastName: "Schneider",
+    company: "Schneider Studio",
+    email: "max@example.com",
+    addressLine1: "48 Lindenstraße",
+    city: "Berlin",
+    postcode: "10115",
+    country: "Germany",
+  },
+];
+
+function getRegion(destination: string): Region {
+  const destinations: Record<string, Region> = {
+    Ireland: "ROI",
+    "Northern Ireland": "NI",
+    "United Kingdom": "GB",
+    Germany: "EU",
+    France: "EU",
+    Spain: "EU",
+    Italy: "EU",
+    Netherlands: "EU",
+    Belgium: "EU",
+    Portugal: "EU",
+    Austria: "EU",
+    Poland: "EU",
+    "United States": "ROW",
+    Australia: "ROW",
+    Canada: "ROW",
+    Japan: "ROW",
+    China: "ROW",
+  };
+
+  return destinations[destination] || "ROW";
 }
 
-function getClampedWeight(
-  itemType: NonNullable<ItemType>,
-  weight: number,
-) {
-  const limits = WEIGHT_LIMITS[itemType];
-  return Math.min(Math.max(weight, limits.min), limits.max);
-}
+function requiresTaricCode(
+  destination: string,
+  customsType: CustomsType | null,
+): boolean {
+  const region = getRegion(destination);
+  const isDocument = customsType === "documents";
 
-function calculateBasePrice(data: CheckoutData): number {
-  if (!data.itemType || !data.destination || data.weight <= 0)
-    return 0;
-
-  const limits = WEIGHT_LIMITS[data.itemType];
-  if (data.weight < limits.min || data.weight > limits.max)
-    return 0;
-
-  const base =
-    BASE_RATES[data.itemType]?.[data.destination] ?? 0;
-  if (!base) return 0;
-
-  const clampedWeight = getClampedWeight(
-    data.itemType,
-    data.weight,
-  );
-  const config = WEIGHT_BAND_CONFIG[data.itemType];
-
-  if (config) {
-    const weightBands = Math.ceil(
-      clampedWeight / config.bandSize,
-    );
-    const additionalBands = Math.max(0, weightBands - 1);
-    return (
-      base + additionalBands * base * config.additionalRate
-    );
+  if (isDocument) return false;
+  if (region === "ROI" || region === "NI" || region === "EU") {
+    return false;
   }
 
-  const weightBands = Math.ceil(clampedWeight / 0.1);
-  return base * weightBands;
+  return true;
 }
 
-function calculateAddOnPrice(data: CheckoutData): number {
-  if (!data.itemType || !data.destination || data.weight <= 0)
-    return 0;
-
-  let total = 0;
-
-  if (data.addOns.tracking && data.itemType !== "parcel")
-    total += 1.5;
-  if (data.addOns.express) total += 3.0;
-  if (data.addOns.insuranceSignature) total += 2.5;
-  if (data.addOns.insurance) total += 2.0;
-  if (data.addOns.additionalInsurance) total += 5.0;
-  if (data.addOns.ddp) total += 4.0;
-
-  return total;
-}
-
-export const CheckoutProvider = ({
-  children,
-}: {
+export const CheckoutProvider: React.FC<{
   children: ReactNode;
-}) => {
-  const [data, setData] = useState<CheckoutData>(
-    createInitialCheckoutData(),
-  );
+}> = ({ children }) => {
+  const [data, setData] = useState<CheckoutData>(initialData);
 
-  const resetCheckout = useCallback(() => {
-    setData(createInitialCheckoutData());
-  }, []);
-
-  const resetAddOns = useCallback(() => {
+  const updateData = (updates: Partial<CheckoutData>) => {
     setData((prev) => ({
       ...prev,
-      addOns: cloneDefaultAddOns(),
+      ...updates,
     }));
-  }, []);
+  };
 
-  const updateData = useCallback(
-    (updates: Partial<CheckoutData>) => {
-      setData((prev) => {
-        const next: CheckoutData = {
-          ...prev,
-          ...updates,
-          addOns: updates.addOns
-            ? { ...updates.addOns }
-            : prev.addOns,
-        };
+  const requiresContentsType = () => {
+    return (
+      data.itemType === "small-packet" ||
+      data.itemType === "parcel"
+    );
+  };
 
-        const itemTypeChanged =
-          updates.itemType !== undefined &&
-          updates.itemType !== prev.itemType;
-        const destinationChanged =
-          updates.destination !== undefined &&
-          updates.destination !== prev.destination;
-        const contentsChanged =
-          updates.contents !== undefined &&
-          updates.contents !== prev.contents;
+  const getBasePrice = (): number => {
+    const { itemType, weight, destination } = data;
 
-        if (itemTypeChanged) {
-          next.weight = 0;
-          next.contents = null;
-          next.addOns = cloneDefaultAddOns();
-        }
+    if (!itemType || !weight || !destination) return 0;
 
-        if (destinationChanged) {
-          next.itemType = updates.itemType ?? next.itemType;
-          next.weight = 0;
-          next.contents = null;
-          next.addOns = cloneDefaultAddOns();
-        }
+    const region = getRegion(destination);
+    let basePrice = 0;
+    switch (itemType) {
+      case "letter":
+        basePrice =
+          region === "ROI" || region === "NI"
+            ? 1.35
+            : region === "EU"
+              ? 2.2
+              : 3.5;
+        break;
 
-        if (contentsChanged) {
-          next.addOns = cloneDefaultAddOns();
-        }
+      case "large-envelope":
+        basePrice =
+          region === "ROI" || region === "NI"
+            ? 2.5
+            : region === "EU"
+              ? 4.0
+              : 6.5;
+        if (weight > 0.25) basePrice += 1.5;
+        break;
 
-        return next;
-      });
-    },
-    [],
-  );
+      case "small-packet":
+        basePrice =
+          region === "ROI" || region === "NI"
+            ? 4.5
+            : region === "EU"
+              ? 8.0
+              : 12.0;
+        if (weight > 0.5) basePrice += 3.0;
+        if (weight > 1) basePrice += 4.0;
+        break;
 
-  const getWeightLimits = useCallback(() => {
-    if (!data.itemType) return null;
-    return WEIGHT_LIMITS[data.itemType];
-  }, [data.itemType]);
+      case "parcel":
+        basePrice =
+          region === "ROI" || region === "NI"
+            ? 8.5
+            : region === "EU"
+              ? 15.0
+              : 25.0;
+        if (weight > 5) basePrice += 5.0;
+        if (weight > 10) basePrice += 8.0;
+        if (weight > 15) basePrice += 10.0;
+        break;
+    }
 
-  const requiresContentsType = useCallback((): boolean => {
-    if (!data.itemType || !data.destination) return false;
-    if (DOMESTIC_DESTINATIONS.includes(data.destination))
-      return false;
-    if (data.itemType === "parcel") return false;
-    return REQUIRES_CONTENTS_ITEM_TYPES.includes(data.itemType);
-  }, [data.destination, data.itemType]);
+    return basePrice;
+  };
 
-  const canShowPrice = useCallback((): boolean => {
-    if (!data.itemType || !data.destination || data.weight <= 0)
-      return false;
+  const getAddOnPrice = (): number => {
+    const { addOns, itemType } = data;
+    let total = 0;
 
-    const limits = WEIGHT_LIMITS[data.itemType];
-    if (data.weight < limits.min || data.weight > limits.max)
-      return false;
+    if (addOns.tracking && itemType !== "parcel") {
+      total += 1.5;
+    }
 
-    if (requiresContentsType() && !data.contents) return false;
+    if (addOns.express) {
+      total += 3.0;
+    }
 
-    return true;
-  }, [
-    data.contents,
-    data.destination,
-    data.itemType,
-    data.weight,
-    requiresContentsType,
-  ]);
+    if (addOns.insuranceSignature) {
+      total += 2.5;
+    }
 
-  const getValidationErrors = useCallback(
-    (step?: number): ValidationError[] => {
-      const errors: ValidationError[] = [];
+    if (addOns.insurance) {
+      total += 2.0;
+    }
 
-      if (step === undefined || step === 1) {
-        if (!data.itemType) {
-          errors.push({
-            field: "itemType",
-            message: "Please select a mail type",
-          });
-        }
+    if (addOns.additionalInsurance) {
+      total += 5.0;
+    }
 
-        if (!data.destination) {
-          errors.push({
-            field: "destination",
-            message: "Please select a destination",
-          });
-        }
+    if (addOns.ddp) {
+      total += 4.0;
+    }
 
-        if (data.itemType && data.weight <= 0) {
-          errors.push({
-            field: "weight",
-            message: "Please select a weight",
-          });
-        }
+    return total;
+  };
 
-        if (data.itemType && data.weight > 0) {
-          const limits = WEIGHT_LIMITS[data.itemType];
-
-          if (data.weight < limits.min) {
-            errors.push({
-              field: "weight",
-              message: `Minimum weight is ${limits.min}kg`,
-            });
-          }
-
-          if (data.weight > limits.max) {
-            errors.push({
-              field: "weight",
-              message: `Maximum weight is ${limits.max}kg`,
-            });
-          }
-        }
-
-        if (requiresContentsType() && !data.contents) {
-          errors.push({
-            field: "contents",
-            message: "Please select what's inside",
-          });
-        }
-      }
-
-      if (step === undefined || step === 2) {
-        if (!data.recipient && !data.selectedContact) {
-          errors.push({
-            field: "recipient",
-            message: "Please enter recipient details",
-          });
-        }
-      }
-
-      return errors;
-    },
-    [
-      data.contents,
-      data.destination,
-      data.itemType,
-      data.recipient,
-      data.selectedContact,
-      data.weight,
-      requiresContentsType,
-    ],
-  );
-
-  const isStepValid = useCallback(
-    (step: number): boolean =>
-      getValidationErrors(step).length === 0,
-    [getValidationErrors],
-  );
-
-  const getBasePrice = useCallback((): number => {
-    if (!canShowPrice()) return 0;
-    return calculateBasePrice(data);
-  }, [canShowPrice, data]);
-
-  const getAddOnPrice = useCallback((): number => {
-    if (!canShowPrice()) return 0;
-    return calculateAddOnPrice(data);
-  }, [canShowPrice, data]);
-
-  const getTotalPrice = useCallback((): number => {
-    if (!canShowPrice()) return 0;
+  const getTotalPrice = (): number => {
     return getBasePrice() + getAddOnPrice();
-  }, [canShowPrice, getAddOnPrice, getBasePrice]);
+  };
 
-  const value = useMemo<CheckoutContextType>(
+  const getValidationErrors = (
+    step: number,
+  ): ValidationError[] => {
+    const errors: ValidationError[] = [];
+
+    if (step === 1) {
+      if (!data.destination) {
+        errors.push({
+          field: "destination",
+          message: "Please select a destination.",
+        });
+      }
+
+      if (!data.itemType) {
+        errors.push({
+          field: "itemType",
+          message: "Please choose an item type.",
+        });
+      }
+
+      if (!data.weight || data.weight <= 0) {
+        errors.push({
+          field: "weight",
+          message: "Please select a weight.",
+        });
+      }
+
+      if (requiresContentsType() && !data.contents) {
+        errors.push({
+          field: "contents",
+          message: "Please choose what’s inside.",
+        });
+      }
+    }
+
+    if (step === 2) {
+      const region = getRegion(data.destination);
+
+      if (region !== "ROI" && region !== "NI") {
+        if (!data.customsType) {
+          errors.push({
+            field: "customsType",
+            message: "Please select a shipment type.",
+          });
+        }
+
+        if (
+          !data.itemDescription ||
+          data.itemDescription.trim().length < 3
+        ) {
+          errors.push({
+            field: "itemDescription",
+            message: "Please enter a valid description.",
+          });
+        }
+
+        if (!data.declaredValue || data.declaredValue <= 0) {
+          errors.push({
+            field: "declaredValue",
+            message: "Please enter the total value.",
+          });
+        }
+
+        if (
+          requiresTaricCode(
+            data.destination,
+            data.customsType,
+          ) &&
+          !data.taricCode.trim()
+        ) {
+          errors.push({
+            field: "taricCode",
+            message:
+              "A TARIC code is required for this destination.",
+          });
+        }
+      }
+    }
+
+    if (step === 3) {
+      if (!data.selectedContact && !data.recipient) {
+        errors.push({
+          field: "recipient",
+          message: "Please select or add a recipient.",
+        });
+      }
+    }
+
+    return errors;
+  };
+
+  const isStepValid = (step: number): boolean => {
+    return getValidationErrors(step).length === 0;
+  };
+
+  const resetCheckout = () => {
+    setData(initialData);
+  };
+
+  const value = useMemo(
     () => ({
       data,
       updateData,
-      resetCheckout,
-      resetAddOns,
       getBasePrice,
       getAddOnPrice,
       getTotalPrice,
-      getWeightLimits,
-      canShowPrice,
+      requiresContentsType,
       getValidationErrors,
       isStepValid,
-      requiresContentsType,
+      resetCheckout,
     }),
-    [
-      data,
-      updateData,
-      resetCheckout,
-      resetAddOns,
-      getBasePrice,
-      getAddOnPrice,
-      getTotalPrice,
-      getWeightLimits,
-      canShowPrice,
-      getValidationErrors,
-      isStepValid,
-      requiresContentsType,
-    ],
+    [data],
   );
 
   return (
@@ -557,7 +420,7 @@ export const CheckoutProvider = ({
   );
 };
 
-export const useCheckout = () => {
+export const useCheckout = (): CheckoutContextType => {
   const context = useContext(CheckoutContext);
 
   if (!context) {

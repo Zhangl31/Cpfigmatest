@@ -97,15 +97,15 @@ const SERVICE_OPTIONS = [
 ];
 
 const DESTINATIONS = [
-  { value: "Ireland", region: "ROI", flag: "🇮🇪" },
-  { value: "Northern Ireland", region: "NI", flag: "🇬🇧" },
-  { value: "United Kingdom", region: "GB", flag: "🇬🇧" },
-  { value: "Germany", region: "EU", flag: "🇩🇪" },
-  { value: "France", region: "EU", flag: "🇫🇷" },
-  { value: "Spain", region: "EU", flag: "🇪🇸" },
-  { value: "United States", region: "ROW", flag: "🇺🇸" },
-  { value: "Australia", region: "ROW", flag: "🇦🇺" },
-  { value: "Canada", region: "ROW", flag: "🇨🇦" },
+  { value: "Ireland", region: "ROI" },
+  { value: "Northern Ireland", region: "NI" },
+  { value: "United Kingdom", region: "GB" },
+  { value: "Germany", region: "EU" },
+  { value: "France", region: "EU" },
+  { value: "Spain", region: "EU" },
+  { value: "United States", region: "ROW" },
+  { value: "Australia", region: "ROW" },
+  { value: "Canada", region: "ROW" },
 ];
 
 const CONTENTS_OPTIONS = [
@@ -924,7 +924,7 @@ export const Step1 = () => {
     setCtaContainer(
       document.getElementById("bottom-cta-container"),
     );
-  }, []);
+  });
 
   const errors = getValidationErrors(1);
   const canProceed = isStepValid(1);
@@ -949,7 +949,7 @@ export const Step1 = () => {
 
   const headerSubtitle = data.destination
     ? "You can change the destination at any time."
-    : "Choose the destination first and we'll show the right delivery options.";
+    : "Choose the destination first and we’ll show the right delivery options.";
 
   const isEditingDestination =
     !data.destination || showDestinationDropdown;
@@ -1234,7 +1234,7 @@ export const Step1 = () => {
                       }}
                     >
                       {DESTINATIONS.map(
-                        ({ value }, index) => {
+                        ({ value, flag }, index) => {
                           const isSelected =
                             data.destination === value;
                           return (
@@ -1259,7 +1259,12 @@ export const Step1 = () => {
                                   : "#FFFFFF",
                               }}
                             >
-                              <span>{value}</span>
+                              <span className="flex items-center gap-2">
+                                <span className="text-lg">
+                                  {flag}
+                                </span>
+                                {value}
+                              </span>
                               {isSelected && (
                                 <Check
                                   className="w-4 h-4"
